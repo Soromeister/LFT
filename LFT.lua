@@ -19,13 +19,26 @@ local function isHcPlayer()
     end
 end
 
+local function ensureSingleChannelExists(channel)
+    --    this remove 2nd addon chat when user gets HC mod or gets 60 lvl
+    if channel == DEFAULT_LFT_CHANNEL and GetChannelName(HARDCORE_LFT_CHANNEL) ~= 0 then
+        LeaveChannelByName(HARDCORE_LFT_CHANNEL)
+        return
+    end
+    if channel == HARDCORE_LFT_CHANNEL and GetChannelName(DEFAULT_LFT_CHANNEL) ~= 0 then
+        LeaveChannelByName(DEFAULT_LFT_CHANNEL)
+    end
+end
+
 local function getCurrentChannel()
     -- 60th level players still have HC mod spell in their spell book, whether they are immortal
     if UnitLevel("player") == 60 then
+        ensureSingleChannelExists(DEFAULT_LFT_CHANNEL)
         return DEFAULT_LFT_CHANNEL
     end
-
-    return isHcPlayer() and HARDCORE_LFT_CHANNEL or DEFAULT_LFT_CHANNEL
+    local currentChannel = isHcPlayer() and HARDCORE_LFT_CHANNEL or DEFAULT_LFT_CHANNEL
+        ensureSingleChannelExists(currentChannel)
+    return currentChannel
 end
 
 local _G, _ = _G or getfenv()
