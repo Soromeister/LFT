@@ -310,6 +310,7 @@ LFTGoingWithPicker:SetScript("OnUpdate", function()
     end
 end)
 
+local COLOR_PURPLE = '|cffff00d9'
 local COLOR_RED = '|cffff222a'
 local COLOR_ORANGE = '|cffff8000'
 local COLOR_GREEN = '|cff1fba1f'
@@ -2074,7 +2075,7 @@ function LFT.getEliteQuests()
                             queued = LFT.quests[title].queued
                         end
                         quests[title] = {
-                            minLevel = level, maxLevel = 60,
+                            minRecLevel = level, maxLevel = 60,
                             code = code, queued = queued, canQueue = true,
                             background = header, myRole = ''
                         }
@@ -2464,10 +2465,10 @@ function LFT.getAvailableDungeons(level, type, mine, partyIndex)
             end
         else
 
-            if level >= data.minLevel and (level <= data.maxLevel or (not mine)) and type ~= 3 then
+            if level >= data.minRecLevel and (level <= data.maxLevel or (not mine)) and type ~= 3 then
                 dungeons[data.code] = true
             end
-            if level >= data.minLevel and type == 3 then
+            if level >= data.minRecLevel and type == 3 then
                 --all available
                 dungeons[data.code] = true
             end
@@ -2559,13 +2560,18 @@ function LFT.fillAvailableDungeons(queueAfter, dont_scroll)
             LFT.availableDungeons[data.code]:Show()
 
             local color = COLOR_GREEN
-            if LFT.level == data.minLevel or LFT.level == data.minLevel + 1 then
+            if LFT.level < data.minRecLevel then
+                color = COLOR_PURPLE
+            end
+			
+			if LFT.level == data.minRecLevel or LFT.level == data.minRecLevel + 1 then
                 color = COLOR_RED
             end
-            if LFT.level == data.minLevel + 2 or LFT.level == data.minLevel + 3 then
+			
+            if LFT.level == data.minRecLevel + 2 or LFT.level == data.minRecLevel + 3 then
                 color = COLOR_ORANGE
             end
-            if LFT.level == data.minLevel + 4 or LFT.level == data.maxLevel + 5 then
+            if LFT.level == data.minRecLevel + 4 or LFT.level == data.maxLevel + 5 then
                 color = COLOR_GREEN
             end
 
@@ -2581,7 +2587,7 @@ function LFT.fillAvailableDungeons(queueAfter, dont_scroll)
                 color = COLOR_DISABLED
                 data.queued = false
                 LFT.addOnEnterTooltip(_G['Dungeon_' .. data.code .. '_Button'], dungeon .. ' is unavailable',
-                        'A member of your group does not meet', 'the suggested minimum level requirement (' .. data.minLevel .. ').')
+                        'A member of your group does not meet', 'the suggested minimum level requirement (' .. data.minRecLevel .. ').')
                 _G['Dungeon_' .. data.code .. '_CheckButton']:Disable()
             end
 
@@ -2589,7 +2595,7 @@ function LFT.fillAvailableDungeons(queueAfter, dont_scroll)
             if LFT_TYPE == TYPE_ELITE_QUESTS then
                 _G['Dungeon_' .. data.code .. 'Levels']:SetText(color .. data.background)
             else
-                _G['Dungeon_' .. data.code .. 'Levels']:SetText(color .. '(' .. data.minLevel .. ' - ' .. data.maxLevel .. ')')
+                _G['Dungeon_' .. data.code .. 'Levels']:SetText(color .. '(' .. data.minRecLevel .. ' - ' .. data.maxLevel .. ')')
             end
 
             _G['Dungeon_' .. data.code .. '_Button']:SetID(dungeonIndex)
@@ -2598,7 +2604,7 @@ function LFT.fillAvailableDungeons(queueAfter, dont_scroll)
             LFT.availableDungeons[data.code].code = data.code
             LFT.availableDungeons[data.code].background = data.background
             LFT.availableDungeons[data.code].questIndex = data.questIndex
-            LFT.availableDungeons[data.code].minLevel = data.minLevel
+            LFT.availableDungeons[data.code].minRecLevel = data.minRecLevel
             LFT.availableDungeons[data.code].maxLevel = data.maxLevel
 
             LFT.dungeons[dungeon].queued = data.queued
@@ -2611,7 +2617,7 @@ function LFT.fillAvailableDungeons(queueAfter, dont_scroll)
 
         end
 
-        if LFT.level >= data.minLevel and LFT_TYPE == 3 then
+        if LFT.level >= data.minRecLevel and LFT_TYPE == 3 then
             --all available
 
             dungeonIndex = dungeonIndex + 1
@@ -2623,13 +2629,16 @@ function LFT.fillAvailableDungeons(queueAfter, dont_scroll)
             LFT.availableDungeons[data.code]:Show()
 
             local color = COLOR_GREEN
-            if LFT.level == data.minLevel or LFT.level == data.minLevel + 1 then
+			if LFT.level < data.minRecLevel then
+                color = COLOR_PURPLE
+            end
+            if LFT.level == data.minRecLevel or LFT.level == data.minRecLevel + 1 then
                 color = COLOR_RED
             end
-            if LFT.level == data.minLevel + 2 or LFT.level == data.minLevel + 3 then
+            if LFT.level == data.minRecLevel + 2 or LFT.level == data.minRecLevel + 3 then
                 color = COLOR_ORANGE
             end
-            if LFT.level == data.minLevel + 4 or LFT.level == data.maxLevel + 5 then
+            if LFT.level == data.minRecLevel + 4 or LFT.level == data.maxLevel + 5 then
                 color = COLOR_GREEN
             end
 
@@ -2645,19 +2654,19 @@ function LFT.fillAvailableDungeons(queueAfter, dont_scroll)
                 color = COLOR_DISABLED
                 data.queued = false
                 LFT.addOnEnterTooltip(_G['Dungeon_' .. data.code .. '_Button'], dungeon .. ' is unavailable',
-                        'A member of your group does not meet', 'the suggested minimum level requirement (' .. data.minLevel .. ').')
+                        'A member of your group does not meet', 'the suggested minimum level requirement (' .. data.minRecLevel .. ').')
                 _G['Dungeon_' .. data.code .. '_CheckButton']:Disable()
             end
 
             _G['Dungeon_' .. data.code .. 'Text']:SetText(color .. dungeon)
-            _G['Dungeon_' .. data.code .. 'Levels']:SetText(color .. '(' .. data.minLevel .. ' - ' .. data.maxLevel .. ')')
+            _G['Dungeon_' .. data.code .. 'Levels']:SetText(color .. '(' .. data.minRecLevel .. ' - ' .. data.maxLevel .. ')')
             _G['Dungeon_' .. data.code .. '_Button']:SetID(dungeonIndex)
 
             LFT.availableDungeons[data.code]:SetPoint("TOPLEFT", _G["DungeonListScrollFrameChildren"], "TOPLEFT", 5, 20 - 20 * (dungeonIndex))
             LFT.availableDungeons[data.code].code = data.code
             LFT.availableDungeons[data.code].background = data.background
             LFT.availableDungeons[data.code].questIndex = data.questIndex
-            LFT.availableDungeons[data.code].minLevel = data.minLevel
+            LFT.availableDungeons[data.code].minRecLevel = data.minRecLevel
             LFT.availableDungeons[data.code].maxLevel = data.maxLevel
 
         end
@@ -2701,7 +2710,7 @@ function LFT.fillAvailableDungeons(queueAfter, dont_scroll)
             if not LFT.dungeons[dungeonName].queued then
                 _G["Dungeon_" .. frame.code .. '_CheckButton']:Disable()
                 _G['Dungeon_' .. frame.code .. 'Text']:SetText(COLOR_DISABLED .. dungeonName)
-                _G['Dungeon_' .. frame.code .. 'Levels']:SetText(COLOR_DISABLED .. '(' .. frame.minLevel .. ' - ' .. frame.maxLevel .. ')')
+                _G['Dungeon_' .. frame.code .. 'Levels']:SetText(COLOR_DISABLED .. '(' .. frame.minRecLevel .. ' - ' .. frame.maxLevel .. ')')
 
                 local q = 'dungeons'
                 if LFT_TYPE == TYPE_ELITE_QUESTS then
@@ -3028,15 +3037,15 @@ end
 function LFT.fuckingSortAlready(t, reverse)
     local a = {}
     for n, l in pairs(t) do
-        table.insert(a, { ['code'] = l.code, ['minLevel'] = l.minLevel, ['name'] = n })
+        table.insert(a, { ['code'] = l.code, ['minRecLevel'] = l.minRecLevel, ['name'] = n })
     end
     if reverse then
         table.sort(a, function(a, b)
-            return a['minLevel'] > b['minLevel']
+            return a['minRecLevel'] > b['minRecLevel']
         end)
     else
         table.sort(a, function(a, b)
-            return a['minLevel'] < b['minLevel']
+            return a['minRecLevel'] < b['minRecLevel']
         end)
     end
 
@@ -3590,13 +3599,16 @@ function LFT.LFTBrowse_Update()
                 LFT.browseFrames[data.code]:Show()
 
                 local color = COLOR_GREEN
-                if LFT.level == data.minLevel or LFT.level == data.minLevel + 1 then
+				if LFT.level < data.minRecLevel then
+					color = COLOR_PURPLE
+				end
+                if LFT.level == data.minRecLevel or LFT.level == data.minRecLevel + 1 then
                     color = COLOR_RED
                 end
-                if LFT.level == data.minLevel + 2 or LFT.level == data.minLevel + 3 then
+                if LFT.level == data.minRecLevel + 2 or LFT.level == data.minRecLevel + 3 then
                     color = COLOR_ORANGE
                 end
-                if LFT.level == data.minLevel + 4 or LFT.level == data.maxLevel + 5 then
+                if LFT.level == data.minRecLevel + 4 or LFT.level == data.maxLevel + 5 then
                     color = COLOR_GREEN
                 end
 
@@ -4236,7 +4248,7 @@ function queueFor(name, status)
                 if not LFT.dungeons[dungeonName].queued then
                     _G["Dungeon_" .. frame.code .. '_CheckButton']:Disable()
                     _G['Dungeon_' .. frame.code .. 'Text']:SetText(COLOR_DISABLED .. dungeonName)
-                    _G['Dungeon_' .. frame.code .. 'Levels']:SetText(COLOR_DISABLED .. '(' .. frame.minLevel .. ' - ' .. frame.maxLevel .. ')')
+                    _G['Dungeon_' .. frame.code .. 'Levels']:SetText(COLOR_DISABLED .. '(' .. frame.minRecLevel .. ' - ' .. frame.maxLevel .. ')')
 
                     local q = 'dungeons'
                     if LFT_TYPE == TYPE_ELITE_QUESTS then
@@ -4711,46 +4723,45 @@ end
 LFT.dungeons = {}
 
 LFT.allDungeons = {
-    ['Ragefire Chasm'] = { minLevel = 13, maxLevel = 18, code = 'rfc', queued = false, canQueue = true, background = 'ragefirechasm', myRole = '' },
-    ['Wailing Caverns'] = { minLevel = 17, maxLevel = 24, code = 'wc', queued = false, canQueue = true, background = 'wailingcaverns', myRole = '' },
-    ['The Deadmines'] = { minLevel = 17, maxLevel = 24, code = 'dm', queued = false, canQueue = true, background = 'deadmines', myRole = '' },
-    ['Shadowfang Keep'] = { minLevel = 22, maxLevel = 30, code = 'sfk', queued = false, canQueue = true, background = 'shadowfangkeep', myRole = '' },
-    ['The Stockade'] = { minLevel = 22, maxLevel = 30, code = 'stocks', queued = false, canQueue = true, background = 'stormwindstockades', myRole = '' },
-    ['Blackfathom Deeps'] = { minLevel = 23, maxLevel = 32, code = 'bfd', queued = false, canQueue = true, background = 'blackfathomdeeps', myRole = '' },
-    ['Scarlet Monastery Graveyard'] = { minLevel = 27, maxLevel = 36, code = 'smgy', queued = false, canQueue = true, background = 'scarletmonastery', myRole = '' },
-    ['Scarlet Monastery Library'] = { minLevel = 28, maxLevel = 39, code = 'smlib', queued = false, canQueue = true, background = 'scarletmonastery', myRole = '' },
-    ['Gnomeregan'] = { minLevel = 29, maxLevel = 38, code = 'gnomer', queued = false, canQueue = true, background = 'gnomeregan', myRole = '' },
-    ['Razorfen Kraul'] = { minLevel = 29, maxLevel = 38, code = 'rfk', queued = false, canQueue = true, background = 'razorfenkraul', myRole = '' },
+    ['Ragefire Chasm'] = { minLevel = 10, minRecLevel = 13, maxLevel = 18, code = 'rfc', queued = false, canQueue = true, background = 'ragefirechasm', myRole = '' },
+    ['Wailing Caverns'] = { minLevel = 10, minRecLevel = 17, maxLevel = 24, code = 'wc', queued = false, canQueue = true, background = 'wailingcaverns', myRole = '' },
+    ['The Deadmines'] = { minLevel = 10, minRecLevel = 17, maxLevel = 24, code = 'dm', queued = false, canQueue = true, background = 'deadmines', myRole = '' },
+    ['Shadowfang Keep'] = { minLevel = 14, minRecLevel = 22, maxLevel = 30, code = 'sfk', queued = false, canQueue = true, background = 'shadowfangkeep', myRole = '' },
+    ['The Stockade'] = { minLevel = 15, minRecLevel = 22, maxLevel = 30, code = 'stocks', queued = false, canQueue = true, background = 'stormwindstockades', myRole = '' },
+    ['Blackfathom Deeps'] = { minLevel = 15, minRecLevel = 23, maxLevel = 32, code = 'bfd', queued = false, canQueue = true, background = 'blackfathomdeeps', myRole = '' },
+    ['Scarlet Monastery Graveyard'] = { minLevel = 21, minRecLevel = 27, maxLevel = 36, code = 'smgy', queued = false, canQueue = true, background = 'scarletmonastery', myRole = '' },
+    ['Scarlet Monastery Library'] = { minLevel = 21, minRecLevel = 28, maxLevel = 39, code = 'smlib', queued = false, canQueue = true, background = 'scarletmonastery', myRole = '' },
+    ['Gnomeregan'] = { minLevel = 19, minRecLevel = 29, maxLevel = 38, code = 'gnomer', queued = false, canQueue = true, background = 'gnomeregan', myRole = '' },
+    ['Razorfen Kraul'] = { minLevel = 25, minRecLevel = 29, maxLevel = 38, code = 'rfk', queued = false, canQueue = true, background = 'razorfenkraul', myRole = '' },
 
-    ['The Crescent Grove'] = { minLevel = 32, maxLevel = 38, code = 'tcg', queued = false, canQueue = true, background = 'tcg', myRole = '' },
+    ['The Crescent Grove'] = { minLevel = 32, minRecLevel = 32, maxLevel = 38, code = 'tcg', queued = false, canQueue = true, background = 'tcg', myRole = '' },
 
-    ['Scarlet Monastery Armory'] = { minLevel = 32, maxLevel = 41, code = 'smarmory', queued = false, canQueue = true, background = 'scarletmonastery', myRole = '' },
-    ['Scarlet Monastery Cathedral'] = { minLevel = 35, maxLevel = 45, code = 'smcath', queued = false, canQueue = true, background = 'scarletmonastery', myRole = '' },
-    ['Razorfen Downs'] = { minLevel = 36, maxLevel = 46, code = 'rfd', queued = false, canQueue = true, background = 'razorfendowns', myRole = '' },
-    ['Uldaman'] = { minLevel = 40, maxLevel = 51, code = 'ulda', queued = false, canQueue = true, background = 'uldaman', myRole = '' },
-    ['Zul\'Farrak'] = { minLevel = 44, maxLevel = 54, code = 'zf', queued = false, canQueue = true, background = 'zulfarak', myRole = '' },
-    ['Maraudon Orange'] = { minLevel = 47, maxLevel = 55, code = 'maraorange', queued = false, canQueue = true, background = 'maraudon', myRole = '' },
-    ['Maraudon Purple'] = { minLevel = 45, maxLevel = 55, code = 'marapurple', queued = false, canQueue = true, background = 'maraudon', myRole = '' },
-    ['Maraudon Princess'] = { minLevel = 47, maxLevel = 55, code = 'maraprincess', queued = false, canQueue = true, background = 'maraudon', myRole = '' },
-    ['Temple of Atal\'Hakkar'] = { minLevel = 50, maxLevel = 60, code = 'st', queued = false, canQueue = true, background = 'sunkentemple', myRole = '' },
-    ['Blackrock Depths'] = { minLevel = 52, maxLevel = 60, code = 'brd', queued = false, canQueue = true, background = 'blackrockdepths', myRole = '' },
-    ['Blackrock Depths Arena'] = { minLevel = 52, maxLevel = 60, code = 'brdarena', queued = false, canQueue = true, background = 'blackrockdepths', myRole = '' },
-    ['Blackrock Depths Emperor'] = { minLevel = 54, maxLevel = 60, code = 'brdemp', queued = false, canQueue = true, background = 'blackrockdepths', myRole = '' },
-    ['Lower Blackrock Spire'] = { minLevel = 55, maxLevel = 60, code = 'lbrs', queued = false, canQueue = true, background = 'blackrockspire', myRole = '' },
-    ['Dire Maul East'] = { minLevel = 55, maxLevel = 60, code = 'dme', queued = false, canQueue = true, background = 'diremaul', myRole = '' },
-    ['Dire Maul North'] = { minLevel = 57, maxLevel = 60, code = 'dmn', queued = false, canQueue = true, background = 'diremaul', myRole = '' },
-    ['Dire Maul Tribute'] = { minLevel = 57, maxLevel = 60, code = 'dmt', queued = false, canQueue = true, background = 'diremaul', myRole = '' },
-    ['Dire Maul West'] = { minLevel = 57, maxLevel = 60, code = 'dmw', queued = false, canQueue = true, background = 'diremaul', myRole = '' },
-    ['Scholomance'] = { minLevel = 58, maxLevel = 60, code = 'scholo', queued = false, canQueue = true, background = 'scholomance', myRole = '' },
-    ['Stratholme: Undead District'] = { minLevel = 58, maxLevel = 60, code = 'stratud', queued = false, canQueue = true, background = 'stratholme', myRole = '' },
-    ['Stratholme: Scarlet Bastion'] = { minLevel = 58, maxLevel = 60, code = 'stratlive', queued = false, canQueue = true, background = 'stratholme', myRole = '' },
+    ['Scarlet Monastery Armory'] = { minLevel = 21, minRecLevel = 32, maxLevel = 41, code = 'smarmory', queued = false, canQueue = true, background = 'scarletmonastery', myRole = '' },
+    ['Scarlet Monastery Cathedral'] = { minLevel = 21, minRecLevel = 35, maxLevel = 45, code = 'smcath', queued = false, canQueue = true, background = 'scarletmonastery', myRole = '' },
+    ['Razorfen Downs'] = { minLevel = 35, minRecLevel = 36, maxLevel = 46, code = 'rfd', queued = false, canQueue = true, background = 'razorfendowns', myRole = '' },
+    ['Uldaman'] = { minLevel = 30, minRecLevel = 40, maxLevel = 51, code = 'ulda', queued = false, canQueue = true, background = 'uldaman', myRole = '' },
+    ['Zul\'Farrak'] = { minLevel = 39, minRecLevel = 44, maxLevel = 54, code = 'zf', queued = false, canQueue = true, background = 'zulfarak', myRole = '' },
+    ['Maraudon Orange'] = { minLevel = 30, minRecLevel = 47, maxLevel = 55, code = 'maraorange', queued = false, canQueue = true, background = 'maraudon', myRole = '' },
+    ['Maraudon Purple'] = { minLevel = 30, minRecLevel = 45, maxLevel = 55, code = 'marapurple', queued = false, canQueue = true, background = 'maraudon', myRole = '' },
+    ['Maraudon Princess'] = { minLevel = 30, minRecLevel = 47, maxLevel = 55, code = 'maraprincess', queued = false, canQueue = true, background = 'maraudon', myRole = '' },
+    ['Temple of Atal\'Hakkar'] = { minLevel = 45, minRecLevel = 50, maxLevel = 60, code = 'st', queued = false, canQueue = true, background = 'sunkentemple', myRole = '' },
+    ['Blackrock Depths'] = { minLevel = 48, minRecLevel = 52, maxLevel = 60, code = 'brd', queued = false, canQueue = true, background = 'blackrockdepths', myRole = '' },
+    ['Blackrock Depths Arena'] = { minLevel = 48, minRecLevel = 52, maxLevel = 60, code = 'brdarena', queued = false, canQueue = true, background = 'blackrockdepths', myRole = '' },
+    ['Blackrock Depths Emperor'] = { minLevel = 48, minRecLevel = 54, maxLevel = 60, code = 'brdemp', queued = false, canQueue = true, background = 'blackrockdepths', myRole = '' },
+    ['Lower Blackrock Spire'] = { minLevel = 48, minRecLevel = 55, maxLevel = 60, code = 'lbrs', queued = false, canQueue = true, background = 'blackrockspire', myRole = '' },
+    ['Dire Maul East'] = { minLevel = 48, minRecLevel = 55, maxLevel = 60, code = 'dme', queued = false, canQueue = true, background = 'diremaul', myRole = '' },
+    ['Dire Maul North'] = { minLevel = 48, minRecLevel = 57, maxLevel = 60, code = 'dmn', queued = false, canQueue = true, background = 'diremaul', myRole = '' },
+    ['Dire Maul West'] = { minLevel = 48, minRecLevel = 57, maxLevel = 60, code = 'dmw', queued = false, canQueue = true, background = 'diremaul', myRole = '' },
+    ['Scholomance'] = { minLevel = 48, minRecLevel = 58, maxLevel = 60, code = 'scholo', queued = false, canQueue = true, background = 'scholomance', myRole = '' },
+    ['Stratholme: Undead District'] = { minLevel = 48, minRecLevel = 58, maxLevel = 60, code = 'stratud', queued = false, canQueue = true, background = 'stratholme', myRole = '' },
+    ['Stratholme: Scarlet Bastion'] = { minLevel = 48, minRecLevel = 58, maxLevel = 60, code = 'stratlive', queued = false, canQueue = true, background = 'stratholme', myRole = '' },
 
-    ['Karazhan Crypt'] = { minLevel = 58, maxLevel = 60, code = 'kc', queued = false, canQueue = true, background = 'kc', myRole = '' },
-    ['Caverns of Time: Black Morass'] = { minLevel = 60, maxLevel = 60, code = 'cotbm', queued = false, canQueue = true, background = 'cotbm', myRole = '' },
-    ['Stormwind Vault'] = { minLevel = 60, maxLevel = 60, code = 'swv', queued = false, canQueue = true, background = 'swv', myRole = '' },
-    ['Hateforge Quarry'] = { minLevel = 50, maxLevel = 60, code = 'hfq', queued = false, canQueue = true, background = 'hfq', myRole = '' },
+    ['Karazhan Crypt'] = { minLevel = 58, minRecLevel = 58, maxLevel = 60, code = 'kc', queued = false, canQueue = true, background = 'kc', myRole = '' },
+    ['Caverns of Time: Black Morass'] = { minLevel = 60, minRecLevel = 60, maxLevel = 60, code = 'cotbm', queued = false, canQueue = true, background = 'cotbm', myRole = '' },
+    ['Stormwind Vault'] = { minLevel = 60, minRecLevel = 60, maxLevel = 60, code = 'swv', queued = false, canQueue = true, background = 'swv', myRole = '' },
+    ['Hateforge Quarry'] = { minLevel = 60, minRecLevel = 50, maxLevel = 60, code = 'hfq', queued = false, canQueue = true, background = 'hfq', myRole = '' },
 
-    --['GM Test'] = { minLevel = 1, maxLevel = 60, code = 'gmtest', queued = false, canQueue = true, background = 'stratholme', myRole = '' },
+    --['GM Test'] = { minRecLevel = 1, maxLevel = 60, code = 'gmtest', queued = false, canQueue = true, background = 'stratholme', myRole = '' },
 }
 
 LFT.bosses = {
@@ -4965,9 +4976,6 @@ LFT.bosses = {
         'Guard Fengus',
         'Guard Slip\'kik',
         'Captain Kromcrush',
-        'King Gordok',
-    },
-    ['dmt'] = {
         'King Gordok',
     },
     ['dmw'] = {
