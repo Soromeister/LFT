@@ -31,7 +31,7 @@ LFT.dungeonsSpamDisplay = {}
 LFT.dungeonsSpamDisplayLFM = {}
 LFT.browseFrames = {}
 LFT.showedUpdateNotification = false
-LFT.maxDungeonsInQueue = 5
+LFT.maxDungeonsInQueue = 15
 LFT.groupSizeMax = 5
 LFT.class = ''
 LFT.channel = LFT_ADDON_CHANNEL
@@ -3628,14 +3628,6 @@ function LFT.LFTBrowse_Update()
                 local healer_color = ''
                 local damage_color = ''
 
-
-
-
-
-
-
-
-
                 --_G["BrowseFrame_" .. data.code .. "IconTank"]:SetDesaturated(0)
                 _G["BrowseFrame_" .. data.code .. "TankButtonTexture"]:SetDesaturated(0)
                 if LFT.dungeonsSpamDisplay[data.code].tank == 0 then
@@ -4626,8 +4618,47 @@ SlashCmdList["LFT"] = function(cmd)
         if string.sub(cmd, 1, 8) == 'sayguild' then
             LFT.sendAdvertisement("GUILD")
         end
+        if string.sub(cmd, 1, 5) == 'roles' then
+            lfprint(COLOR_GREEN .. '================ Info! ================' .. COLOR_WHITE)
+            local myRole = ''
+            if _G['roleCheckTank']:GetChecked() then
+                myRole = 'tank'
+            end
+            if _G['roleCheckHealer']:GetChecked() then
+                myRole = 'healer'
+            end
+            if _G['roleCheckDamage']:GetChecked() then
+                myRole = 'damage'
+            end
+            printRole(UnitName('player'), myRole)
+            for i = 1, GetNumPartyMembers() do
+                if UnitName('party' .. i) then
+                    if LFT.currentGroupRoles[UnitName('party' .. i)] ~= nil then
+                        printRole(UnitName('party' .. i), LFT.currentGroupRoles[UnitName('party' .. i)])
+                    else
+                        printRole(UnitName('party' .. i), nil)
+                    end
+                end
+            end
+            lfprint(COLOR_GREEN .. '================ End info! ================' .. COLOR_WHITE)
+        end
     end
 end
+
+function printRole(name, role)
+    if role == 'tank' then
+        lfprint(LFT.classColors[LFT.playerClass(name)].c .. name .. COLOR_WHITE .. ' is ' .. COLOR_TANK .. LFT.ucFirst('tank') .. COLOR_WHITE)
+    end
+    if role == 'healer' then
+        lfprint(LFT.classColors[LFT.playerClass(name)].c .. name .. COLOR_WHITE .. ' is ' .. COLOR_HEALER .. LFT.ucFirst('healer') .. COLOR_WHITE)
+    end
+    if role == 'damage' then
+        lfprint(LFT.classColors[LFT.playerClass(name)].c .. name .. COLOR_WHITE .. ' is ' .. COLOR_DAMAGE .. LFT.ucFirst('damage') .. COLOR_WHITE)
+    end
+    if role == nil then
+        lfprint(LFT.classColors[LFT.playerClass(name)].c .. name .. COLOR_WHITE .. ' is role NOT FOUND')
+    end
+end 
 
 function LFT.sendAdvertisement(chan)
     SendChatMessage('I am using LFT - Looking For Turtles - LFG Addon for Turtle WoW v' .. addonVer, chan, DEFAULT_CHAT_FRAME.editBox.languageID)
