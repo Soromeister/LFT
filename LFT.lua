@@ -1,12 +1,51 @@
 BINDING_HEADER_LFT = "Looking For Turtles"
 BINDING_NAME_LFT = "Toggle Turtle Finder"
 
+local DEFAULT_LFT_CHANNEL = 'LFT'
+local HARDCORE_LFT_CHANNEL = 'LFT_HC'
+
+local function isHcPlayer()
+    local i = 1
+    while true do
+    local spellName, spellRank = GetSpellName(i, BOOKTYPE_SPELL)
+        if not spellName then
+            do break end
+        end
+
+        if spellName == "Hardcore" and spellRank == "Challenge" then
+            return true
+        end
+             i = i + 1
+    end
+end
+
+local function ensureSingleChannelExists(channel)
+    --    this remove 2nd addon chat when user gets HC mod or gets 60 lvl
+    if channel == DEFAULT_LFT_CHANNEL and GetChannelName(HARDCORE_LFT_CHANNEL) ~= 0 then
+        LeaveChannelByName(HARDCORE_LFT_CHANNEL)
+        return
+    end
+    if channel == HARDCORE_LFT_CHANNEL and GetChannelName(DEFAULT_LFT_CHANNEL) ~= 0 then
+        LeaveChannelByName(DEFAULT_LFT_CHANNEL)
+    end
+end
+
+local function getCurrentChannel()
+    -- 60th level players still have HC mod spell in their spell book, whether they are immortal
+    if UnitLevel("player") == 60 then
+        ensureSingleChannelExists(DEFAULT_LFT_CHANNEL)
+        return DEFAULT_LFT_CHANNEL
+    end
+    local currentChannel = isHcPlayer() and HARDCORE_LFT_CHANNEL or DEFAULT_LFT_CHANNEL
+        ensureSingleChannelExists(currentChannel)
+    return currentChannel
+end
+
 local _G, _ = _G or getfenv()
 
 local LFT = CreateFrame("Frame")
 local me = UnitName('player')
 local addonVer = '0.0.3.3'
-local LFT_ADDON_CHANNEL = 'LFT'
 local groupsFormedThisSession = 0
 
 -- check: while in group, window closes at 0 and 30
@@ -34,7 +73,6 @@ LFT.showedUpdateNotification = false
 LFT.maxDungeonsInQueue = 15
 LFT.groupSizeMax = 5
 LFT.class = ''
-LFT.channel = LFT_ADDON_CHANNEL
 LFT.channelIndex = 0
 LFT.level = UnitLevel('player')
 LFT.findingGroup = false
@@ -298,7 +336,7 @@ LFTGoingWithPicker:SetScript("OnUpdate", function()
         LFT.dungeons[LFT.dungeonNameFromCode(LFTGoingWithPicker.dungeon)].myRole = LFTGoingWithPicker.myRole
 
         SendChatMessage('goingWith:' .. LFTGoingWithPicker.candidate .. ':' .. LFTGoingWithPicker.dungeon
-                .. ':' .. LFTGoingWithPicker.myRole, "CHANNEL", DEFAULT_CHAT_FRAME.editBox.languageID, GetChannelName(LFT.channel))
+                .. ':' .. LFTGoingWithPicker.myRole, "CHANNEL", DEFAULT_CHAT_FRAME.editBox.languageID, GetChannelName(getCurrentChannel()))
 
         LFT.foundGroup = true
 
@@ -725,12 +763,12 @@ LFTComms:SetScript("OnEvent", function()
             --lfdebug('channel index = ' .. LFT.channelIndex) -- blank
         end
         if event == 'CHAT_MSG_CHANNEL_NOTICE' then
-            if arg9 == LFT.channel and arg1 == 'YOU_JOINED' then
+            if arg9 == getCurrentChannel() and arg1 == 'YOU_JOINED' then
                 LFT.channelIndex = arg8
             end
         end
 
-        if event == 'CHAT_MSG_ADDON' and arg1 == LFT_ADDON_CHANNEL then
+        if event == 'CHAT_MSG_ADDON' and arg1 == getCurrentChannel() then
             lfdebug(arg4 .. ' says : ' .. arg2)
             if string.sub(arg2, 1, 11) == 'objectives:' and arg4 ~= me then
                 local objEx = string.split(arg2, ':')
@@ -915,7 +953,7 @@ LFTComms:SetScript("OnEvent", function()
                 LFTQueue:Hide()
 
                 if LFT.isLeader then
-                    SendChatMessage("[LFT]:lft_group_formed:" .. mCode .. ":" .. time() - LFT.queueStartTime, "CHANNEL", DEFAULT_CHAT_FRAME.editBox.languageID, GetChannelName(LFT.channel))
+                    SendChatMessage("[LFT]:lft_group_formed:" .. mCode .. ":" .. time() - LFT.queueStartTime, "CHANNEL", DEFAULT_CHAT_FRAME.editBox.languageID, GetChannelName(getCurrentChannel()))
                 end
             end
             if string.sub(arg2, 1, 10) == 'weInQueue:' then
@@ -963,15 +1001,15 @@ LFTComms:SetScript("OnEvent", function()
                 --    lfdebug('is leader')
                 --    if LFT_ROLE == 'tank' then
                 --        LFT.LFMGroup.tank = me
-                --        SendAddonMessage(LFT_ADDON_CHANNEL, "acceptRole:" .. LFT_ROLE, "PARTY")
+                --        SendAddonMessage(getCurrentChannel(), "acceptRole:" .. LFT_ROLE, "PARTY")
                 --    end
                 --    if LFT_ROLE == 'healer' then
                 --        LFT.LFMGroup.healer = me
-                --        SendAddonMessage(LFT_ADDON_CHANNEL, "acceptRole:" .. LFT_ROLE, "PARTY")
+                --        SendAddonMessage(getCurrentChannel(), "acceptRole:" .. LFT_ROLE, "PARTY")
                 --    end
                 --    if LFT_ROLE == 'damage' then
                 --        LFT.LFMGroup.damage1 = me
-                --        SendAddonMessage(LFT_ADDON_CHANNEL, "acceptRole:" .. LFT_ROLE, "PARTY")
+                --        SendAddonMessage(getCurrentChannel(), "acceptRole:" .. LFT_ROLE, "PARTY")
                 --    end
                 --else
                 _G['LFTRoleCheckQForText']:SetText(COLOR_WHITE .. "Queued for " .. COLOR_YELLOW .. LFT.dungeonNameFromCode(mCode))
@@ -1270,7 +1308,7 @@ LFTComms:SetScript("OnEvent", function()
 
         if event == 'CHAT_MSG_CHANNEL' and arg8 == LFT.channelIndex and arg2 ~= me then
             if string.sub(arg1, 1, 7) == 'whoLFT:' then
-                SendChatMessage('meLFT:' .. addonVer, "CHANNEL", DEFAULT_CHAT_FRAME.editBox.languageID, GetChannelName(LFT.channel))
+                SendChatMessage('meLFT:' .. addonVer, "CHANNEL", DEFAULT_CHAT_FRAME.editBox.languageID, GetChannelName(getCurrentChannel()))
             end
             if string.sub(arg1, 1, 6) == 'meLFT:' then
                 --lfdebug(arg1)
@@ -1388,7 +1426,7 @@ LFTComms:SetScript("OnEvent", function()
                             LFT.dungeons[LFT.dungeonNameFromCode(mDungeon)].myRole = mRole
                             lfdebug('myRole for ' .. mDungeon .. ' set to ' .. mRole)
 
-                            SendChatMessage('goingWith:' .. arg2 .. ':' .. mDungeon .. ':' .. mRole, "CHANNEL", DEFAULT_CHAT_FRAME.editBox.languageID, GetChannelName(LFT.channel))
+                            SendChatMessage('goingWith:' .. arg2 .. ':' .. mDungeon .. ':' .. mRole, "CHANNEL", DEFAULT_CHAT_FRAME.editBox.languageID, GetChannelName(getCurrentChannel()))
                             LFT.foundGroup = true
                             --end
 
@@ -1480,7 +1518,7 @@ LFTComms:SetScript("OnEvent", function()
                                         end
                                     end
                                     if foundMessage ~= '' then
-                                        SendChatMessage(foundMessage, "CHANNEL", DEFAULT_CHAT_FRAME.editBox.languageID, GetChannelName(LFT.channel))
+                                        SendChatMessage(foundMessage, "CHANNEL", DEFAULT_CHAT_FRAME.editBox.languageID, GetChannelName(getCurrentChannel()))
                                     end
                                     return false
                                 end
@@ -1539,7 +1577,7 @@ LFTComms:SetScript("OnEvent", function()
                     end
                 end
 
-                SendChatMessage(foundMessage, "CHANNEL", DEFAULT_CHAT_FRAME.editBox.languageID, GetChannelName(LFT.channel))
+                SendChatMessage(foundMessage, "CHANNEL", DEFAULT_CHAT_FRAME.editBox.languageID, GetChannelName(getCurrentChannel()))
 
             end
         end
@@ -1749,7 +1787,7 @@ LFT:SetScript("OnEvent", function()
                             objectivesString = objectivesString .. '0-'
                         end
                     end
-                    SendAddonMessage(LFT_ADDON_CHANNEL, "objectives:" .. LFT.LFMDungeonCode .. ":" .. objectivesString, "PARTY")
+                    SendAddonMessage(getCurrentChannel(), "objectives:" .. LFT.LFMDungeonCode .. ":" .. objectivesString, "PARTY")
                     -- end send objectives
                     if LFT.isLeader then
 
@@ -1775,7 +1813,7 @@ LFT:SetScript("OnEvent", function()
 
                             if not LFTFillAvailableDungeonsDelay.queueAfterIfPossible then
                                 --group full
-                                SendAddonMessage(LFT_ADDON_CHANNEL, "LFMPartyReady:" .. LFT.LFMDungeonCode .. ":" .. LFTObjectives.objectivesComplete .. ":" .. LFT.tableSize(LFT.bosses[LFT.LFMDungeonCode]), "PARTY")
+                                SendAddonMessage(getCurrentChannel(), "LFMPartyReady:" .. LFT.LFMDungeonCode .. ":" .. LFTObjectives.objectivesComplete .. ":" .. LFT.tableSize(LFT.bosses[LFT.LFMDungeonCode]), "PARTY")
                                 return false -- so it goes into check full in timer
                             end
                             leaveQueue(' someone joined manually')
@@ -1784,9 +1822,9 @@ LFT:SetScript("OnEvent", function()
                             --joined from the queue, we know his role, check if group is full
                             --  lfdebug('player ' .. newName .. ' joined from queue')
                             if LFT.checkLFMGroupReady(LFT.LFMDungeonCode) then
-                                SendAddonMessage(LFT_ADDON_CHANNEL, "LFMPartyReady:" .. LFT.LFMDungeonCode .. ":" .. LFTObjectives.objectivesComplete .. ":" .. LFT.tableSize(LFT.bosses[LFT.LFMDungeonCode]), "PARTY")
+                                SendAddonMessage(getCurrentChannel(), "LFMPartyReady:" .. LFT.LFMDungeonCode .. ":" .. LFTObjectives.objectivesComplete .. ":" .. LFT.tableSize(LFT.bosses[LFT.LFMDungeonCode]), "PARTY")
                             else
-                                SendAddonMessage(LFT_ADDON_CHANNEL, "weInQueue:" .. LFT.LFMDungeonCode, "PARTY")
+                                SendAddonMessage(getCurrentChannel(), "weInQueue:" .. LFT.LFMDungeonCode, "PARTY")
                             end
                         end
                     end
@@ -2220,10 +2258,10 @@ LFTQueue:SetScript("OnUpdate", function()
 
                     SendChatMessage("[LFT]:" .. code .. ":party:ready:" .. healer .. ":" ..
                             damage1 .. ":" .. damage2 .. ":" .. damage3,
-                            "CHANNEL", DEFAULT_CHAT_FRAME.editBox.languageID, GetChannelName(LFT.channel))
+                            "CHANNEL", DEFAULT_CHAT_FRAME.editBox.languageID, GetChannelName(getCurrentChannel()))
 
                     SendChatMessage("[LFT]:lft_group_formed:" .. code .. ":" .. time() - LFT.queueStartTime,
-                            "CHANNEL", DEFAULT_CHAT_FRAME.editBox.languageID, GetChannelName(LFT.channel))
+                            "CHANNEL", DEFAULT_CHAT_FRAME.editBox.languageID, GetChannelName(getCurrentChannel()))
 
                     --untick everything
                     for dungeon, data in next, LFT.dungeons do
@@ -2275,7 +2313,7 @@ function LFT.checkLFTChannel()
     local chanList = { GetChannelList() }
 
     for _, value in next, chanList do
-        if value == LFT.channel then
+        if value == getCurrentChannel() then
             LFT.channelIndex = lastVal
             break
         end
@@ -2284,7 +2322,7 @@ function LFT.checkLFTChannel()
 
     if LFT.channelIndex == 0 then
         --lfdebug('not in chan, joining')
-        JoinChannelByName(LFT.channel)
+        JoinChannelByName(getCurrentChannel())
     else
         --lfdebug('in chan, chilling LFT.channelIndex = ' .. LFT.channelIndex)
     end
@@ -2330,7 +2368,7 @@ function LFT.GetPossibleRoles()
     _G['LFTRoleCheckRoleHealer']:SetDesaturated(1)
     _G['LFTRoleCheckRoleDamage']:SetDesaturated(1)
 
-    if LFT.class == 'warrior' then
+    if LFT.class == 'warrior' or LFT.class == 'rogue' then
 
         tankCheck:Enable()
         tankCheck:Show()
@@ -2421,7 +2459,7 @@ function LFT.GetPossibleRoles()
 
         return 'healer'
     end
-    if LFT.class == 'warlock' or LFT.class == 'hunter' or LFT.class == 'mage' or LFT.class == 'rogue' then
+    if LFT.class == 'warlock' or LFT.class == 'hunter' or LFT.class == 'mage' then
 
         damageCheck:Enable()
         damageCheck:Show()
@@ -2825,7 +2863,7 @@ function LFT.addTank(dungeon, name, faux, add)
             LFT.group[dungeon].tank = name
         end
         if not faux then
-            --SendChatMessage('found:tank:' .. dungeon .. ':' .. name, "CHANNEL", DEFAULT_CHAT_FRAME.editBox.languageID, GetChannelName(LFT.channel))
+            --SendChatMessage('found:tank:' .. dungeon .. ':' .. name, "CHANNEL", DEFAULT_CHAT_FRAME.editBox.languageID, GetChannelName(getCurrentChannel()))
         end
         return true
     end
@@ -2847,7 +2885,7 @@ function LFT.addHealer(dungeon, name, faux, add)
             LFT.group[dungeon].healer = name
         end
         if not faux then
-            --SendChatMessage('found:healer:' .. dungeon .. ':' .. name, "CHANNEL", DEFAULT_CHAT_FRAME.editBox.languageID, GetChannelName(LFT.channel))
+            --SendChatMessage('found:healer:' .. dungeon .. ':' .. name, "CHANNEL", DEFAULT_CHAT_FRAME.editBox.languageID, GetChannelName(getCurrentChannel()))
         end
         return true
     end
@@ -2895,7 +2933,7 @@ function LFT.addDamage(dungeon, name, faux, add)
             LFT.group[dungeon].damage1 = name
         end
         if not faux then
-            --            SendChatMessage('found:damage:' .. dungeon .. ':' .. name, "CHANNEL", DEFAULT_CHAT_FRAME.editBox.languageID, GetChannelName(LFT.channel))
+            --            SendChatMessage('found:damage:' .. dungeon .. ':' .. name, "CHANNEL", DEFAULT_CHAT_FRAME.editBox.languageID, GetChannelName(getCurrentChannel()))
         end
         return true
     elseif LFT.group[dungeon].damage2 == '' then
@@ -2903,7 +2941,7 @@ function LFT.addDamage(dungeon, name, faux, add)
             LFT.group[dungeon].damage2 = name
         end
         if not faux then
-            --            SendChatMessage('found:damage:' .. dungeon .. ':' .. name, "CHANNEL", DEFAULT_CHAT_FRAME.editBox.languageID, GetChannelName(LFT.channel))
+            --            SendChatMessage('found:damage:' .. dungeon .. ':' .. name, "CHANNEL", DEFAULT_CHAT_FRAME.editBox.languageID, GetChannelName(getCurrentChannel()))
         end
         return true
     elseif LFT.group[dungeon].damage3 == '' then
@@ -2911,7 +2949,7 @@ function LFT.addDamage(dungeon, name, faux, add)
             LFT.group[dungeon].damage3 = name
         end
         if not faux then
-            --            SendChatMessage('found:damage:' .. dungeon .. ':' .. name, "CHANNEL", DEFAULT_CHAT_FRAME.editBox.languageID, GetChannelName(LFT.channel))
+            --            SendChatMessage('found:damage:' .. dungeon .. ':' .. name, "CHANNEL", DEFAULT_CHAT_FRAME.editBox.languageID, GetChannelName(getCurrentChannel()))
         end
         return true
     end
@@ -3121,7 +3159,7 @@ function LFT.checkLFMgroup(someoneDeclined)
             damage2 = LFT.LFMGroup.damage2,
             damage3 = LFT.LFMGroup.damage3,
         }
-        SendAddonMessage(LFT_ADDON_CHANNEL, "weInQueue:" .. LFT.LFMDungeonCode, "PARTY")
+        SendAddonMessage(getCurrentChannel(), "weInQueue:" .. LFT.LFMDungeonCode, "PARTY")
         lfdebug('LFTRoleCheck:Hide() in checkLFMGROUP we ready')
         LFTRoleCheck:Hide()
     end
@@ -3256,19 +3294,19 @@ function LFT.sendCancelMeMessage()
     if string.find(LFT_ROLE, 'tank', 1, true) then
         SendChatMessage('leftQueue:tank', "CHANNEL",
                 DEFAULT_CHAT_FRAME.editBox.languageID,
-                GetChannelName(LFT.channel))
+                GetChannelName(getCurrentChannel()))
 
     end
     if string.find(LFT_ROLE, 'healer', 1, true) then
         SendChatMessage('leftQueue:healer', "CHANNEL",
                 DEFAULT_CHAT_FRAME.editBox.languageID,
-                GetChannelName(LFT.channel))
+                GetChannelName(getCurrentChannel()))
 
     end
     if string.find(LFT_ROLE, 'damage', 1, true) then
         SendChatMessage('leftQueue:damage', "CHANNEL",
                 DEFAULT_CHAT_FRAME.editBox.languageID,
-                GetChannelName(LFT.channel))
+                GetChannelName(getCurrentChannel()))
 
     end
 end
@@ -3287,7 +3325,7 @@ function LFT.sendLFGMessage(role)
 
     SendChatMessage(lfg_text, "CHANNEL",
             DEFAULT_CHAT_FRAME.editBox.languageID,
-            GetChannelName(LFT.channel))
+            GetChannelName(getCurrentChannel()))
 end
 
 function LFT.sendLFMStats(code)
@@ -3318,7 +3356,7 @@ function LFT.sendLFMStats(code)
 
     SendChatMessage("LFM:" .. code .. ":" .. tank .. ":" .. healer .. ":" .. damage, "CHANNEL",
             DEFAULT_CHAT_FRAME.editBox.languageID,
-            GetChannelName(LFT.channel))
+            GetChannelName(getCurrentChannel()))
 end
 
 function LFT.isNeededInLFMGroup(role, name, code)
@@ -3349,7 +3387,7 @@ function LFT.isNeededInLFMGroup(role, name, code)
 end
 
 function LFT.inviteInLFMGroup(name)
-    SendChatMessage("[LFT]:" .. LFT.LFMDungeonCode .. ":(LFM):" .. name, "CHANNEL", DEFAULT_CHAT_FRAME.editBox.languageID, GetChannelName(LFT.channel))
+    SendChatMessage("[LFT]:" .. LFT.LFMDungeonCode .. ":(LFM):" .. name, "CHANNEL", DEFAULT_CHAT_FRAME.editBox.languageID, GetChannelName(getCurrentChannel()))
     InviteByName(name)
 end
 
@@ -3403,7 +3441,7 @@ function LFT.sendMinimapDataToParty(code)
     if LFT.group[code].damage3 ~= '' then
         damage = damage + 1
     end
-    SendAddonMessage(LFT_ADDON_CHANNEL, "minimap:" .. code .. ":" .. tank .. ":" .. healer .. ":" .. damage, "PARTY")
+    SendAddonMessage(getCurrentChannel(), "minimap:" .. code .. ":" .. tank .. ":" .. healer .. ":" .. damage, "PARTY")
 end
 
 function LFT.addOnEnterTooltip(frame, title, text1, text2, x, y)
@@ -3436,10 +3474,11 @@ function LFT.removeOnEnterTooltip(frame)
 end
 
 function LFT.sendMyVersion()
-    SendAddonMessage(LFT_ADDON_CHANNEL, "LFTVersion:" .. addonVer, "PARTY")
-    SendAddonMessage(LFT_ADDON_CHANNEL, "LFTVersion:" .. addonVer, "GUILD")
-    SendAddonMessage(LFT_ADDON_CHANNEL, "LFTVersion:" .. addonVer, "RAID")
-    SendAddonMessage(LFT_ADDON_CHANNEL, "LFTVersion:" .. addonVer, "BATTLEGROUND")
+    local currentChannel = getCurrentChannel()
+    SendAddonMessage(currentChannel, "LFTVersion:" .. addonVer, "PARTY")
+    SendAddonMessage(currentChannel, "LFTVersion:" .. addonVer, "GUILD")
+    SendAddonMessage(currentChannel, "LFTVersion:" .. addonVer, "RAID")
+    SendAddonMessage(currentChannel, "LFTVersion:" .. addonVer, "BATTLEGROUND")
 end
 
 function LFT.removePlayerFromVirtualParty(name, mRole)
@@ -3756,7 +3795,7 @@ function acceptRole()
 
     LFT.SetSingleRole(myRole)
 
-    SendAddonMessage(LFT_ADDON_CHANNEL, "acceptRole:" .. myRole, "PARTY")
+    SendAddonMessage(getCurrentChannel(), "acceptRole:" .. myRole, "PARTY")
     LFT.showMyRoleIcon(myRole)
     --LFTRoleCheck:Hide()
     _G['LFTRoleCheck']:Hide()
@@ -3775,7 +3814,7 @@ function declineRole()
     end
     LFT.dungeons[LFT.dungeonNameFromCode(LFT.LFMDungeonCode)].myRole = myRole
     local myRole = LFT.dungeons[LFT.dungeonNameFromCode(LFT.LFMDungeonCode)].myRole
-    SendAddonMessage(LFT_ADDON_CHANNEL, "declineRole:" .. myRole, "PARTY")
+    SendAddonMessage(getCurrentChannel(), "declineRole:" .. myRole, "PARTY")
 
     --LFTRoleCheck:Hide()
     _G['LFTRoleCheck']:Hide()
@@ -3837,7 +3876,7 @@ function sayReady()
     if LFT.inGroup and GetNumPartyMembers() + 1 == LFT.groupSizeMax then
         _G['LFTGroupReady']:Hide()
         local myRole = LFT.dungeons[LFT.dungeonNameFromCode(LFT.groupFullCode)].myRole
-        SendAddonMessage(LFT_ADDON_CHANNEL, "readyAs:" .. myRole, "PARTY")
+        SendAddonMessage(getCurrentChannel(), "readyAs:" .. myRole, "PARTY")
         LFT.SetSingleRole(myRole)
         LFT.GetPossibleRoles()
         LFT.showMyRoleIcon(myRole)
@@ -3852,7 +3891,7 @@ function sayNotReady()
     if LFT.inGroup and GetNumPartyMembers() + 1 == LFT.groupSizeMax then
         _G['LFTGroupReady']:Hide()
         local myRole = LFT.dungeons[LFT.dungeonNameFromCode(LFT.groupFullCode)].myRole
-        SendAddonMessage(LFT_ADDON_CHANNEL, "notReadyAs:" .. myRole, "PARTY")
+        SendAddonMessage(getCurrentChannel(), "notReadyAs:" .. myRole, "PARTY")
         LFT.SetSingleRole(myRole)
         LFT.GetPossibleRoles()
         LFTMinimapAnimation:Hide()
@@ -4284,7 +4323,7 @@ function findMore()
         LFTsetRole('damage', true, true)
     end
 
-    SendAddonMessage(LFT_ADDON_CHANNEL, "roleCheck:" .. qDungeon, "PARTY")
+    SendAddonMessage(getCurrentChannel(), "roleCheck:" .. qDungeon, "PARTY")
 
     LFT.fixMainButton()
 
@@ -4357,7 +4396,7 @@ function findGroup()
     --if not dontAdvertise then
     --    SendChatMessage(lfg_text, "CHANNEL",
     --            DEFAULT_CHAT_FRAME.editBox.languageID,
-    --            GetChannelName(LFT.channel))
+    --            GetChannelName(getCurrentChannel()))
     --end
 
     dungeonsText = string.sub(dungeonsText, 1, string.len(dungeonsText) - 2)
@@ -4433,7 +4472,7 @@ function leaveQueue(callData)
     if LFT.findingGroup or LFT.findingMore then
         if LFT.inGroup then
             if LFT.isLeader then
-                SendAddonMessage(LFT_ADDON_CHANNEL, "leaveQueue:now", "PARTY")
+                SendAddonMessage(getCurrentChannel(), "leaveQueue:now", "PARTY")
             end
             lfprint('Your group has left the queue for |cff69ccf0' .. dungeonsText .. COLOR_WHITE .. '.')
         else
@@ -4498,7 +4537,7 @@ function LFTObjectives.objectiveComplete(bossName, dontSendToAll)
     if code ~= '' then
         if not dontSendToAll then
             --lfdebug("send " .. "objectives:" .. code .. ":" .. objectivesString)
-            SendAddonMessage(LFT_ADDON_CHANNEL, "objectives:" .. code .. ":" .. objectivesString, "PARTY")
+            SendAddonMessage(getCurrentChannel(), "objectives:" .. code .. ":" .. objectivesString, "PARTY")
         end
 
         --dungeon complete ?
@@ -4581,7 +4620,7 @@ SlashCmdList["LFT"] = function(cmd)
                 return false
             end
             LFTWhoCounter:Show()
-            SendChatMessage('whoLFT:' .. addonVer, "CHANNEL", DEFAULT_CHAT_FRAME.editBox.languageID, GetChannelName(LFT.channel))
+            SendChatMessage('whoLFT:' .. addonVer, "CHANNEL", DEFAULT_CHAT_FRAME.editBox.languageID, GetChannelName(getCurrentChannel()))
         end
         if string.sub(cmd, 1, 17) == 'resetformedgroups' then
             LFT.resetFormedGroups()
@@ -4676,9 +4715,9 @@ function LFT.removeChannelFromWindows()
     for windowIndex = 1, 9 do
         local DefaultChannels = { GetChatWindowChannels(windowIndex) };
         for i, d in DefaultChannels do
-            if d == LFT.channel then
+            if d == getCurrentChannel() then
                 if getglobal("ChatFrame" .. windowIndex) then
-                    ChatFrame_RemoveChannel(getglobal("ChatFrame" .. windowIndex), LFT.channel); -- DEFAULT_CHAT_FRAME works well, too
+                    ChatFrame_RemoveChannel(getglobal("ChatFrame" .. windowIndex), getCurrentChannel()); -- DEFAULT_CHAT_FRAME works well, too
                     lfprint('LFT channel removed from window ' .. windowIndex .. ' LFT')
                     lfnotice('Please do not type in the LFT channel or add it to your chat frames.')
                 end
@@ -5071,7 +5110,7 @@ LFT.bosses = {
         'Fenektis the Deceiver',
         'Master Raxxieth'
     },
-	['hfq'] = {
+    ['hfq'] = {
         'High Foreman Bargul Blackhammer',
         'Engineer Figgles',
         'Corrosis',
@@ -5121,3 +5160,4 @@ function string:split(delimiter)
     table.insert(result, string.sub(self, from))
     return result
 end
+
