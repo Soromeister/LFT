@@ -1927,7 +1927,7 @@ function LFT.init()
     if not LFT_CONFIG then
         LFT_CONFIG = {}
         LFT_CONFIG['debug'] = false
-        LFT_CONFIG['spamChat'] = true
+        LFT_CONFIG['spamChat'] = false
     end
 
     if LFT_CONFIG['debug'] then
